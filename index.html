@@ -188,11 +188,10 @@
 <script>
     (function() {
         const CLICKS_BEFORE_REST = 5;
-        const REST_DURATION = 60 * 1000; // ТЕПЕРЬ 1 МИНУТА
+        const REST_DURATION = 60 * 1000; // 1 минута тишины
         let clickCount = 0;
-        const nativeOpen = window.open;
 
-        // Создаем индикатор
+        // Плашка статуса
         const status = document.createElement('div');
         status.id = 'ad-status-box';
         document.body.appendChild(status);
@@ -202,51 +201,50 @@
             const now = Date.now();
 
             if (restUntil && now < restUntil) {
-                // --- ФАЗА ОТДЫХА (1 МИНУТА) ---
+                // --- ОТДЫХ (Блокировка всего) ---
                 const rem = Math.ceil((restUntil - now) / 1000);
                 status.innerText = `☕ ОТДЫХ: ${rem}с`;
                 status.style.color = "#3498db";
                 
-                // Полная блокировка окон во время отдыха
-                window.open = function() { return { focus: function(){} }; };
-                
-                // Удаляем скрипт и очищаем память
-                const s = document.getElementById('monetag-tag');
+                // Удаляем скрипт, чтобы он не перехватывал клики
+                const s = document.getElementById('monetag-vignette');
                 if (s) s.remove();
-                window.mg_vignette_shown = true; 
+                
+                // Заглушка для окон на всякий случай
+                window.open = function() { return null; };
                 return;
             }
 
-            // --- ФАЗА РЕКЛАМЫ (5 КЛИКОВ) ---
-            window.open = nativeOpen;
+            // --- РАБОТА ---
             status.innerText = `⚡ РЕКЛАМА: ${clickCount + 1}/${CLICKS_BEFORE_REST}`;
             status.style.color = "#2ecc71";
+            window.open = window.open; // (можно вернуть оригинал, если сохранен)
             
-            if (!document.getElementById('monetag-tag')) {
+            if (!document.getElementById('monetag-vignette')) {
                 const s = document.createElement('script');
-                s.id = 'monetag-tag';
-                s.src = "https://quge5.com/88/tag.min.js";
-                s.dataset.zone = "213246";
-                document.head.appendChild(s);
+                s.id = 'monetag-vignette';
+                s.dataset.zone = '10640856';
+                s.src = 'https://gizokraijaw.net/vignette.min.js';
+                (document.body || document.documentElement).appendChild(s);
             }
         }
 
         document.addEventListener('mousedown', function(e) {
             const restUntil = localStorage.getItem('ad_pause_until');
             if (restUntil && Date.now() < restUntil) {
-                // Полный игнор рекламных событий во время отдыха
+                // В фазе отдыха клик не уходит к рекламному скрипту
                 e.stopImmediatePropagation();
                 return;
             }
 
-            // Считаем клики по интерактивным элементам
+            // Считаем клики только по важным элементам (кнопки, задачи)
             if (e.target.closest('button, .goal-card, .icon-btn, input, .task-item')) {
                 clickCount++;
                 if (clickCount >= CLICKS_BEFORE_REST) {
                     localStorage.setItem('ad_pause_until', Date.now() + REST_DURATION);
                     clickCount = 0;
                 }
-                setTimeout(updateLogic, 50);
+                setTimeout(updateLogic, 100);
             }
         }, true);
 
