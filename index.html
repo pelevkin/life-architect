@@ -192,66 +192,72 @@
         let clickCount = 0;
         let isResting = false;
 
-        // Сохраняем оригинальный метод открытия окон
-        const nativeOpen = window.open;
+        const nativeOpen = window.open; // Сохраняем оригинал
 
-        function setStatus(text, color) {
-            const el = document.getElementById('ad-status-box');
-            if (el) {
-                el.innerText = text;
-                el.style.color = color;
-            }
-        }
+        const status = document.createElement('div');
+        status.id = 'ad-status-box';
+        document.body.appendChild(status);
 
-        function checkLogic() {
+        function updateLogic() {
             const restUntil = localStorage.getItem('ad_pause_until');
             const now = Date.now();
 
             if (restUntil && now < restUntil) {
+                // --- ФАЗА ПОЛНОЙ БЛОКИРОВКИ ---
                 isResting = true;
-                const remaining = Math.ceil((restUntil - now) / 1000);
-                setStatus(`☕ ОТДЫХ: ${remaining}с`, "#3498db");
-                window.open = function() { return null; }; // Блокируем рекламу
+                const rem = Math.ceil((restUntil - now) / 1000);
+                status.innerText = `☕ ОТДЫХ: ${rem}с`;
+                status.style.color = "#3498db";
+                
+                window.open = function() { return null; }; // Запрещаем открывать окна
+                removeScript();
                 return;
             }
 
+            // --- ФАЗА РАЗРЕШЕНИЯ ---
             isResting = false;
-            window.open = nativeOpen; // Возвращаем возможность открытия
-            setStatus(`⚡ РЕКЛАМА: ${clickCount + 1}/${CLICKS_BEFORE_REST}`, "#2ecc71");
-            
-            // Загружаем скрипт Monetag только если не отдыхаем
-            if (!document.getElementById('monetag-js')) {
-                const s = document.createElement('script');
-                s.id = 'monetag-js';
-                s.src = "https://quge5.com/88/tag.min.js";
-                s.dataset.zone = "213246";
-                document.head.appendChild(s);
-            }
+            window.open = nativeOpen; // Возвращаем доступ
+            status.innerText = `⚡ РЕКЛАМА: ${clickCount + 1}/${CLICKS_BEFORE_REST}`;
+            status.style.color = "#2ecc71";
+            injectScript();
         }
 
-        document.addEventListener('mousedown', function(e) {
-            if (isResting) return;
+        function injectScript() {
+            if (document.getElementById('monetag-tag')) return;
+            const s = document.createElement('script');
+            s.id = 'monetag-tag';
+            s.src = "https://quge5.com/88/tag.min.js";
+            s.dataset.zone = "213246";
+            document.head.appendChild(s);
+        }
 
-            // Считаем любой клик, как это делают крупные сайты
-            clickCount++;
-            
-            if (clickCount >= CLICKS_BEFORE_REST) {
-                localStorage.setItem('ad_pause_until', Date.now() + REST_DURATION);
-                clickCount = 0;
-                // Удаляем скрипт, чтобы он не висел в памяти
-                const s = document.getElementById('monetag-js');
-                if (s) s.remove();
+        function removeScript() {
+            const s = document.getElementById('monetag-tag');
+            if (s) s.remove();
+        }
+
+        // Перехват клика на самом глубоком уровне
+        document.addEventListener('mousedown', function(e) {
+            if (isResting) {
+                // Если отдых — блокируем распространение клика для рекламы
+                e.stopImmediatePropagation();
+                return;
             }
-            updateUI();
+
+            if (e.target.closest('button, .goal-card, .icon-btn, input')) {
+                clickCount++;
+                if (clickCount >= CLICKS_BEFORE_REST) {
+                    localStorage.setItem('ad_pause_until', Date.now() + REST_DURATION);
+                    clickCount = 0;
+                }
+                setTimeout(updateLogic, 50);
+            }
         }, true);
 
-        function updateUI() {
-            checkLogic();
-        }
-
-        setInterval(updateUI, 1000);
-        checkLogic();
+        setInterval(updateLogic, 1000);
+        updateLogic();
     })();
+</script>
 </script>
 </script>
 </script>
