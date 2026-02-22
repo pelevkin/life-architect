@@ -187,72 +187,72 @@
 
 <script>
     (function() {
-        const CLICKS_LIMIT = 5;       
-        const REST_TIME = 10 * 1000;  
-        let clicks = 0;
+        const CLICKS_BEFORE_REST = 5;
+        const REST_DURATION = 10000; // 10 секунд
+        let clickCount = 0;
+        let isResting = false;
 
-        const status = document.createElement('div');
-        status.id = 'ad-status-box';
-        document.body.appendChild(status);
+        // Сохраняем оригинальный метод открытия окон
+        const nativeOpen = window.open;
 
-        function updateLogic() {
+        function setStatus(text, color) {
+            const el = document.getElementById('ad-status-box');
+            if (el) {
+                el.innerText = text;
+                el.style.color = color;
+            }
+        }
+
+        function checkLogic() {
+            const restUntil = localStorage.getItem('ad_pause_until');
             const now = Date.now();
-            const restStart = localStorage.getItem('ad_rest_start');
 
-            if (restStart) {
-                const diff = now - restStart;
-                if (diff < REST_TIME) {
-                    const rem = Math.ceil((REST_TIME - diff) / 1000);
-                    status.innerText = `☕ ОТДЫХ: ${rem}с`;
-                    status.style.color = "#3498db";
-                    removeAds();
-                    return;
-                } else {
-                    localStorage.removeItem('ad_rest_start');
-                    clicks = 0;
-                }
+            if (restUntil && now < restUntil) {
+                isResting = true;
+                const remaining = Math.ceil((restUntil - now) / 1000);
+                setStatus(`☕ ОТДЫХ: ${remaining}с`, "#3498db");
+                window.open = function() { return null; }; // Блокируем рекламу
+                return;
             }
 
-            if (clicks < CLICKS_LIMIT) {
-                status.innerText = `⚡ РЕКЛАМА: ${clicks + 1}/${CLICKS_LIMIT}`;
-                status.style.color = "#2ecc71";
-                injectAds();
-            } else {
-                localStorage.setItem('ad_rest_start', Date.now());
-                updateLogic();
+            isResting = false;
+            window.open = nativeOpen; // Возвращаем возможность открытия
+            setStatus(`⚡ РЕКЛАМА: ${clickCount + 1}/${CLICKS_BEFORE_REST}`, "#2ecc71");
+            
+            // Загружаем скрипт Monetag только если не отдыхаем
+            if (!document.getElementById('monetag-js')) {
+                const s = document.createElement('script');
+                s.id = 'monetag-js';
+                s.src = "https://quge5.com/88/tag.min.js";
+                s.dataset.zone = "213246";
+                document.head.appendChild(s);
             }
         }
 
-        function injectAds() {
-            if (document.getElementById('monetag-tag')) return;
-            const s = document.createElement('script');
-            s.id = 'monetag-tag';
-            s.src = "https://quge5.com/88/tag.min.js";
-            s.dataset.zone = "213246";
-            document.head.appendChild(s);
-        }
+        document.addEventListener('mousedown', function(e) {
+            if (isResting) return;
 
-        function removeAds() {
-            const s = document.getElementById('monetag-tag');
-            if (s) s.remove();
-        }
-
-        // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: перехватываем клик, но не блокируем его
-        document.addEventListener('click', function(e) {
-            const restStart = localStorage.getItem('ad_rest_start');
-            if (restStart) return; 
-
-            // Если кликнули по кнопке или цели
-            if (e.target.closest('button, .goal-card, .icon-btn, input')) {
-                clicks++;
-                // Даем 100мс рекламе сработать, затем обновляем статус
-                setTimeout(updateLogic, 100);
+            // Считаем любой клик, как это делают крупные сайты
+            clickCount++;
+            
+            if (clickCount >= CLICKS_BEFORE_REST) {
+                localStorage.setItem('ad_pause_until', Date.now() + REST_DURATION);
+                clickCount = 0;
+                // Удаляем скрипт, чтобы он не висел в памяти
+                const s = document.getElementById('monetag-js');
+                if (s) s.remove();
             }
-        }, true); 
+            updateUI();
+        }, true);
 
-        setInterval(updateLogic, 1000);
-        updateLogic();
+        function updateUI() {
+            checkLogic();
+        }
+
+        setInterval(updateUI, 1000);
+        checkLogic();
     })();
+</script>
 </script>
 </script>
 </script>
