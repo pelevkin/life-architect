@@ -187,70 +187,19 @@
 
 <script>
     (function() {
-        const CLICKS_BEFORE_REST = 5;
-        const REST_DURATION = 60 * 1000; // 1 минута тишины
-        let clickCount = 0;
-
-        // Плашка статуса
-        const status = document.createElement('div');
-        status.id = 'ad-status-box';
-        document.body.appendChild(status);
-
-        function updateLogic() {
-            const restUntil = localStorage.getItem('ad_pause_until');
-            const now = Date.now();
-
-            if (restUntil && now < restUntil) {
-                // --- ОТДЫХ (Блокировка всего) ---
-                const rem = Math.ceil((restUntil - now) / 1000);
-                status.innerText = `☕ ОТДЫХ: ${rem}с`;
-                status.style.color = "#3498db";
-                
-                // Удаляем скрипт, чтобы он не перехватывал клики
-                const s = document.getElementById('monetag-vignette');
-                if (s) s.remove();
-                
-                // Заглушка для окон на всякий случай
-                window.open = function() { return null; };
-                return;
-            }
-
-            // --- РАБОТА ---
-            status.innerText = `⚡ РЕКЛАМА: ${clickCount + 1}/${CLICKS_BEFORE_REST}`;
-            status.style.color = "#2ecc71";
-            window.open = window.open; // (можно вернуть оригинал, если сохранен)
-            
-            if (!document.getElementById('monetag-vignette')) {
-                const s = document.createElement('script');
-                s.id = 'monetag-vignette';
-                s.dataset.zone = '10640856';
-                s.src = 'https://gizokraijaw.net/vignette.min.js';
-                (document.body || document.documentElement).appendChild(s);
-            }
-        }
-
-        document.addEventListener('mousedown', function(e) {
-            const restUntil = localStorage.getItem('ad_pause_until');
-            if (restUntil && Date.now() < restUntil) {
-                // В фазе отдыха клик не уходит к рекламному скрипту
-                e.stopImmediatePropagation();
-                return;
-            }
-
-            // Считаем клики только по важным элементам (кнопки, задачи)
-            if (e.target.closest('button, .goal-card, .icon-btn, input, .task-item')) {
-                clickCount++;
-                if (clickCount >= CLICKS_BEFORE_REST) {
-                    localStorage.setItem('ad_pause_until', Date.now() + REST_DURATION);
-                    clickCount = 0;
-                }
-                setTimeout(updateLogic, 100);
-            }
-        }, true);
-
-        setInterval(updateLogic, 1000);
-        updateLogic();
+        // Создаем скрипт для формата Vignette
+        const s = document.createElement('script');
+        s.dataset.zone = '10640856';
+        s.src = 'https://gizokraijaw.net/vignette.min.js';
+        
+        // Добавляем его на страницу
+        (document.body || document.documentElement).appendChild(s);
+        
+        // Опционально: удаляем старый статус-бокс, если он остался в HTML
+        const oldStatus = document.getElementById('ad-status-box');
+        if (oldStatus) oldStatus.remove();
     })();
+</script>
 </script>
 
 </script>
