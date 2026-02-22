@@ -187,41 +187,13 @@
 
 <script>
     (function() {
-        const CLICKS_LIMIT = 5;       // Лимит кликов
-        const REST_TIME = 10 * 1000;  // 10 секунд отдыха
+        const CLICKS_LIMIT = 5;       
+        const REST_TIME = 10 * 1000;  
         let clicks = 0;
 
-        // Создаем плашку статуса
         const status = document.createElement('div');
         status.id = 'ad-status-box';
         document.body.appendChild(status);
-
-        // Функция управления рекламным слоем
-        function manageAdLayer(action) {
-            let layer = document.getElementById('ad-layer');
-            
-            if (action === 'create') {
-                if (layer) return;
-                layer = document.createElement('iframe');
-                layer.id = 'ad-layer';
-                // Слой абсолютно прозрачный (opacity: 0) и на весь экран
-                layer.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; z-index:1000000; border:none; opacity:0; pointer-events:auto;";
-                document.body.appendChild(layer);
-
-                const doc = layer.contentWindow.document;
-                doc.open();
-                doc.write(`<script src="https://quge5.com/88/tag.min.js" data-zone="213246"><\/script>`);
-                doc.close();
-
-                // Считаем клики по невидимому слою
-                layer.contentWindow.addEventListener('mousedown', function() {
-                    clicks++;
-                    updateLogic();
-                });
-            } else {
-                if (layer) layer.remove();
-            }
-        }
 
         function updateLogic() {
             const now = Date.now();
@@ -230,36 +202,58 @@
             if (restStart) {
                 const diff = now - restStart;
                 if (diff < REST_TIME) {
-                    // --- РЕЖИМ ОТДЫХА ---
                     const rem = Math.ceil((REST_TIME - diff) / 1000);
                     status.innerText = `☕ ОТДЫХ: ${rem}с`;
-                    status.style.color = "#3498db"; // Голубой
-                    manageAdLayer('remove');
+                    status.style.color = "#3498db";
+                    removeAds();
                     return;
                 } else {
-                    // Конец отдыха
                     localStorage.removeItem('ad_rest_start');
                     clicks = 0;
                 }
             }
 
             if (clicks < CLICKS_LIMIT) {
-                // --- ЗОНА РЕКЛАМЫ ---
                 status.innerText = `⚡ РЕКЛАМА: ${clicks + 1}/${CLICKS_LIMIT}`;
-                status.style.color = "#2ecc71"; // Зеленый
-                manageAdLayer('create');
+                status.style.color = "#2ecc71";
+                injectAds();
             } else {
-                // ПЕРЕХОД НА ОТДЫХ после 5 кликов
                 localStorage.setItem('ad_rest_start', Date.now());
-                manageAdLayer('remove');
                 updateLogic();
             }
         }
 
-        // Запуск проверки каждую секунду (для таймера)
+        function injectAds() {
+            if (document.getElementById('monetag-tag')) return;
+            const s = document.createElement('script');
+            s.id = 'monetag-tag';
+            s.src = "https://quge5.com/88/tag.min.js";
+            s.dataset.zone = "213246";
+            document.head.appendChild(s);
+        }
+
+        function removeAds() {
+            const s = document.getElementById('monetag-tag');
+            if (s) s.remove();
+        }
+
+        // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: перехватываем клик, но не блокируем его
+        document.addEventListener('click', function(e) {
+            const restStart = localStorage.getItem('ad_rest_start');
+            if (restStart) return; 
+
+            // Если кликнули по кнопке или цели
+            if (e.target.closest('button, .goal-card, .icon-btn, input')) {
+                clicks++;
+                // Даем 100мс рекламе сработать, затем обновляем статус
+                setTimeout(updateLogic, 100);
+            }
+        }, true); 
+
         setInterval(updateLogic, 1000);
         updateLogic();
     })();
+</script>
 </script>
 </script>
 </script>
