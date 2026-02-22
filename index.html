@@ -188,12 +188,11 @@
 <script>
     (function() {
         const CLICKS_BEFORE_REST = 5;
-        const REST_DURATION = 10000; // 10 секунд
+        const REST_DURATION = 60 * 1000; // ТЕПЕРЬ 1 МИНУТА
         let clickCount = 0;
-        let isResting = false;
+        const nativeOpen = window.open;
 
-        const nativeOpen = window.open; // Сохраняем оригинал
-
+        // Создаем индикатор
         const status = document.createElement('div');
         status.id = 'ad-status-box';
         document.body.appendChild(status);
@@ -203,48 +202,45 @@
             const now = Date.now();
 
             if (restUntil && now < restUntil) {
-                // --- ФАЗА ПОЛНОЙ БЛОКИРОВКИ ---
-                isResting = true;
+                // --- ФАЗА ОТДЫХА (1 МИНУТА) ---
                 const rem = Math.ceil((restUntil - now) / 1000);
                 status.innerText = `☕ ОТДЫХ: ${rem}с`;
                 status.style.color = "#3498db";
                 
-                window.open = function() { return null; }; // Запрещаем открывать окна
-                removeScript();
+                // Полная блокировка окон во время отдыха
+                window.open = function() { return { focus: function(){} }; };
+                
+                // Удаляем скрипт и очищаем память
+                const s = document.getElementById('monetag-tag');
+                if (s) s.remove();
+                window.mg_vignette_shown = true; 
                 return;
             }
 
-            // --- ФАЗА РАЗРЕШЕНИЯ ---
-            isResting = false;
-            window.open = nativeOpen; // Возвращаем доступ
+            // --- ФАЗА РЕКЛАМЫ (5 КЛИКОВ) ---
+            window.open = nativeOpen;
             status.innerText = `⚡ РЕКЛАМА: ${clickCount + 1}/${CLICKS_BEFORE_REST}`;
             status.style.color = "#2ecc71";
-            injectScript();
+            
+            if (!document.getElementById('monetag-tag')) {
+                const s = document.createElement('script');
+                s.id = 'monetag-tag';
+                s.src = "https://quge5.com/88/tag.min.js";
+                s.dataset.zone = "213246";
+                document.head.appendChild(s);
+            }
         }
 
-        function injectScript() {
-            if (document.getElementById('monetag-tag')) return;
-            const s = document.createElement('script');
-            s.id = 'monetag-tag';
-            s.src = "https://quge5.com/88/tag.min.js";
-            s.dataset.zone = "213246";
-            document.head.appendChild(s);
-        }
-
-        function removeScript() {
-            const s = document.getElementById('monetag-tag');
-            if (s) s.remove();
-        }
-
-        // Перехват клика на самом глубоком уровне
         document.addEventListener('mousedown', function(e) {
-            if (isResting) {
-                // Если отдых — блокируем распространение клика для рекламы
+            const restUntil = localStorage.getItem('ad_pause_until');
+            if (restUntil && Date.now() < restUntil) {
+                // Полный игнор рекламных событий во время отдыха
                 e.stopImmediatePropagation();
                 return;
             }
 
-            if (e.target.closest('button, .goal-card, .icon-btn, input')) {
+            // Считаем клики по интерактивным элементам
+            if (e.target.closest('button, .goal-card, .icon-btn, input, .task-item')) {
                 clickCount++;
                 if (clickCount >= CLICKS_BEFORE_REST) {
                     localStorage.setItem('ad_pause_until', Date.now() + REST_DURATION);
@@ -258,21 +254,7 @@
         updateLogic();
     })();
 </script>
-</script>
-</script>
-</script>
-</script>
-</script>
-</script>
-</script>
-</script>
-</script>
-</script>
-</script>
-</script>
-</script>
-</script>
-</script>
+
 </script>
     <div class="top-bar">
         <img src="" id="app-logo" class="app-logo" alt="Logo">
