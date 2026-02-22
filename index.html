@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Life Architect</title>
+
+    <meta name="mylead-verification" content="15d1a487a4f53384515a9a4e19ba6cc1">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="https://i.ibb.co/HyHNV5r/22222.png">
+    <link rel="icon" type="image/png" href="https://i.ibb.co/HyHNV5r/22222.png">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#121212">
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+    
+
+    <style>
+
+        /* Таймер обратного отсчета для рекламы */
+#ad-timer {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    color: var(--secondary);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: bold;
+    z-index: 10000;
+    pointer-events: none; /* Чтобы не мешал кликать */
+    backdrop-filter: blur(4px);
+    border: 1px solid var(--border);
+    display: none; /* По умолчанию скрыт */
+}
+        /* --- ДИЗАЙН --- */
+        :root {
+            --bg: #121212; --card: #1e1e1e; --input-bg: #2b2b2b; --border: #333;
+            --primary: #bb86fc; --secondary: #03dac6; --text: #ffffff; --text-muted: #b0b0b0;
+            --gold: #ffd700; --shadow: 0 5px 15px rgba(0,0,0,0.5);
+            --success: #4caf50; --danger: #cf6679;
+        }
+
+        body.light-mode {
+            --bg: #f0f2f5; --card: #ffffff; --input-bg: #f0f0f0; --border: #ddd;
+            --primary: #6200ee; --secondary: #018786; --text: #222222; --text-muted: #666666;
+            --gold: #ffb700; --shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text);
+            margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center;
+            transition: 0.3s; overflow-x: hidden; padding-bottom: 50px;
+        }
+
+        /* ТОП БАР */
+        .top-bar { width: 100%; max-width: 600px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .app-logo { width: 45px; height: 45px; border-radius: 12px; object-fit: cover; box-shadow: var(--shadow); border: 1px solid var(--border); transition: 0.3s; }
+        .top-buttons { display: flex; gap: 10px; align-items: center; }
+        .icon-btn { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 50%; cursor: pointer; font-size: 20px; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; box-shadow: var(--shadow); transition: 0.3s; position: relative; overflow: hidden; }
+        .icon-btn:hover { transform: scale(1.1); border-color: var(--primary); }
+        .icon-btn img { width: 24px; height: 24px; object-fit: contain; }
+        .user-avatar { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+        /* ПРОФИЛЬ */
+        .profile-container { background: var(--card); width: 100%; max-width: 600px; padding: 20px; border-radius: 20px; display: flex; align-items: center; gap: 20px; border: 1px solid var(--border); margin-bottom: 20px; box-shadow: var(--shadow); }
+        .avatar-box { width: 80px; height: 80px; position: relative; flex-shrink: 0; cursor: pointer; }
+        .avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); display: none; }
+        .avatar-placeholder { width: 100%; height: 100%; border-radius: 50%; background: var(--input-bg); border: 2px dashed var(--text-muted); display: flex; justify-content: center; align-items: center; color: var(--text-muted); }
+        .avatar-placeholder svg { width: 40px; height: 40px; fill: currentColor; }
+        .name-input { background: transparent; border: none; border-bottom: 1px dashed var(--text-muted); color: var(--text); font-size: 20px; font-weight: bold; width: 100%; padding: 5px; margin-bottom: 5px; font-family: inherit; }
+        .name-input:focus { outline: none; border-bottom: 2px solid var(--primary); }
+        .xp-bar-bg { height: 8px; background: var(--input-bg); border-radius: 4px; overflow: hidden; }
+        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); width: 0%; transition: 0.5s; }
+
+        /* КНОПКА СОЗДАТЬ */
+        .create-btn { background: var(--primary); color: #fff; font-size: 18px; font-weight: bold; padding: 15px 50px; border-radius: 50px; border: none; cursor: pointer; box-shadow: 0 0 20px rgba(0,0,0,0.2); margin-bottom: 30px; transition: 0.1s; }
+        .create-btn:active { transform: scale(0.95); }
+
+        /* СЕТКА */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; width: 100%; max-width: 900px; }
+        .goal-card { background: var(--card); border-radius: 15px; overflow: hidden; border: 2px solid transparent; cursor: pointer; transition: 0.3s; position: relative; box-shadow: var(--shadow); display: flex; flex-direction: column; }
+        .goal-card:hover { border-color: var(--primary); transform: translateY(-5px); }
+        .goal-card.completed { border-color: var(--gold); opacity: 0.7; filter: grayscale(50%); }
+        .goal-card.completed:hover { opacity: 1; filter: grayscale(0%); }
+        .goal-card.completed .goal-progress .goal-fill { background: var(--gold); }
+        .badge-done { position: absolute; top: 10px; right: 10px; background: var(--gold); color: black; font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 4px; display: none; z-index: 2; }
+        .goal-card.completed .badge-done { display: block; }
+        .goal-img { height: 120px; background: var(--input-bg); display: flex; justify-content: center; align-items: center; font-size: 40px; color: var(--text-muted); pointer-events: none; }
+        .goal-img img { width: 100%; height: 100%; object-fit: cover; }
+        .goal-content { padding: 15px; pointer-events: none; }
+        .goal-progress { height: 5px; background: var(--input-bg); margin-top: 10px; border-radius: 3px; }
+        .goal-fill { height: 100%; background: var(--secondary); width: 0%; transition: width 0.3s; }
+
+        /* РЕКЛАМА */
+        .ad-container { width: 100%; display: flex; justify-content: center; margin: 20px 0; }
+        .ad-box { width: 100%; max-width: 728px; min-height: 100px; background: var(--input-bg); border: 2px dashed var(--border); border-radius: 12px; overflow: hidden; display: flex; justify-content: center; align-items: center; position: relative; }
+        .custom-ad-link { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; text-decoration: none; }
+        .custom-ad-img { width: 100%; height: 100%; object-fit: cover; max-height: 300px; } 
+        .ad-placeholder { color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* МОДАЛКА */
+        .modal-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .modal { background: var(--card); width: 90%; max-width: 500px; padding: 20px; border-radius: 15px; border: 1px solid var(--border); display: flex; flex-direction: column; max-height: 90vh; overflow-y: auto; color: var(--text); position: relative; }
+        
+        .btn-close-top { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; color: var(--text-muted); cursor: pointer; transition: 0.2s; z-index: 10; }
+        .btn-close-top:hover { color: var(--primary); }
+
+        .title-edit { background: var(--input-bg); border: 1px solid var(--border); color: var(--text); font-size: 18px; padding: 10px; width: 100%; box-sizing: border-box; margin-bottom: 10px; border-radius: 8px; margin-right: 30px; }
+        .steps-hint { color: var(--text-muted); font-size: 13px; margin: 10px 0; text-align: center; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px dashed var(--border); line-height: 1.4; }
+        
+        .task-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .task-item { display: flex; align-items: center; gap: 10px; background: var(--input-bg); padding: 10px; border-radius: 8px; transition: 0.3s; }
+        .task-overdue { border: 1px solid var(--danger); background: rgba(207, 102, 121, 0.1); }
+        .task-overdue .task-text-input { color: var(--danger); font-weight: bold; }
+        .task-done { opacity: 0.6; order: 999; }
+
+        .checkbox { width: 24px; height: 24px; border: 2px solid var(--primary); border-radius: 6px; cursor: pointer; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+        .checkbox.checked { background: var(--primary); }
+        .checkbox.checked::after { content: '✔'; color: white; font-weight: bold; }
+        .task-text-input { background: transparent; border: none; color: var(--text); flex-grow: 1; font-size: 14px; }
+        .btn-del { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; }
+        .btn-action { padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; width: 100%; }
+        .btn-green { background: var(--input-bg); color: var(--secondary); border: 1px dashed var(--secondary); }
+        .btn-red { background: rgba(255,0,0,0.1); color: #cf6679; }
+        .btn-close { background: var(--primary); color: white; margin-top: 10px; }
+        
+        /* ФИНАНСЫ */
+        .fin-toggle { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer; user-select: none; }
+        .fin-toggle input { width: 18px; height: 18px; accent-color: var(--secondary); }
+        .fin-toggle label { color: var(--secondary); font-weight: bold; cursor: pointer; }
+        
+        .fin-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .fin-input { background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; flex-grow: 1; width: 100%; box-sizing: border-box; }
+        .fin-select { background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; }
+        .mode-selector { display: flex; gap: 10px; margin-bottom: 15px; }
+        .mode-btn { flex: 1; padding: 10px; background: var(--input-bg); border: 1px solid var(--border); color: var(--text-muted); border-radius: 8px; cursor: pointer; }
+        .mode-btn.active { background: var(--secondary); color: #000; border-color: var(--secondary); font-weight: bold; }
+        .fin-progress-text { text-align: center; font-size: 14px; margin-bottom: 5px; color: var(--text-muted); }
+        .fin-progress-big { font-size: 24px; font-weight: bold; color: var(--secondary); }
+        .encouragement-text { text-align: center; color: var(--secondary); margin-bottom: 10px; font-size: 14px; font-weight: bold; display: none; }
+
+        /* TOAST NOTIFICATION */
+        .toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 4000; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast { background: var(--card); border: 1px solid var(--success); color: var(--text); padding: 15px 25px; border-radius: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; animation: slideDown 0.5s ease forwards; pointer-events: auto; min-width: 250px; }
+        .toast-emoji { font-size: 24px; margin-bottom: 5px; }
+        .toast-text { font-weight: bold; font-size: 14px; text-align: center; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateY(-20px); } }
+
+        /* FOOTER LANGS */
+        .footer-langs { display: flex; gap: 15px; margin-top: 20px; justify-content: center; }
+        .lang-btn { background: none; border: none; font-size: 24px; cursor: pointer; opacity: 0.5; transition: 0.3s; }
+        .lang-btn:hover, .lang-btn.active { opacity: 1; transform: scale(1.2); }
+
+        /* ОКНА */
+        .install-guide { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 3000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+        .install-card { background: var(--card); width: 90%; max-width: 350px; border-radius: 20px; padding: 25px; border: 1px solid var(--primary); text-align: center; color: var(--text); position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.6); transition: 0.3s; }
+        .install-card.pc-wide { max-width: 600px; }
+        .video-wrapper-vertical { width: 100%; max-width: 200px; aspect-ratio: 9/16; margin: 15px auto; background: black; border-radius: 12px; overflow: hidden; border: 2px solid var(--border); display: none; }
+        .video-wrapper-horizontal { width: 100%; aspect-ratio: 16/9; margin: 15px auto; background: black; border-radius: 12px; overflow: hidden; border: 2px solid var(--border); display: none; }
+        iframe { width: 100%; height: 100%; border: none; }
+        .guide-step { font-size: 15px; margin: 12px 0; color: var(--text-muted); display: flex; align-items: center; justify-content: flex-start; gap: 10px; text-align: left; }
+        .guide-icon { font-size: 24px; background: var(--input-bg); padding: 5px; border-radius: 8px; width: 30px; height:30px; display:flex; justify-content:center; align-items:center; flex-shrink:0;}
+        .close-install { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; }
+        .key-badge { background: var(--primary); color: white; padding: 5px 10px; border-radius: 5px; font-weight: bold; font-family: monospace; font-size: 16px; }
+
+        .celebration-modal { text-align: center; z-index: 3000; }
+        .share-btn { background: #25D366; color: white; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .confetti { position: fixed; top: -10px; width: 10px; height: 10px; background: gold; z-index: 9999; animation: fall 3s linear forwards; pointer-events: none; }
+        @keyframes fall { to { transform: translateY(100vh) rotate(720deg); } }
+        .status-dot { width:10px; height:10px; border-radius:50%; position: absolute; bottom:2px; right:2px; border:2px solid var(--card); }
+        .status-green { background: #00e676; }
+        .status-gray { background: #bdbdbd; }
+        .dev-btn { display: inline-flex; align-items: center; gap: 8px; margin-top: 15px; padding: 10px 20px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 20px; text-decoration: none; color: var(--text-muted); font-size: 13px; font-weight: bold; transition: 0.3s; }
+        .dev-btn:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-2px); }
+        .dev-btn span { font-size: 16px; }
+    </style>
+</head>
+<body>
+
+<script>
+    (function() {
+        const CLICKS_LIMIT = 5;       // Лимит кликов
+        const REST_TIME = 10 * 1000;  // 10 секунд отдыха
+        let clicks = 0;
+
+        // Создаем плашку статуса
+        const status = document.createElement('div');
+        status.id = 'ad-status-box';
+        document.body.appendChild(status);
+
+        // Функция управления рекламным слоем
+        function manageAdLayer(action) {
+            let layer = document.getElementById('ad-layer');
+            
+            if (action === 'create') {
+                if (layer) return;
+                layer = document.createElement('iframe');
+                layer.id = 'ad-layer';
+                // Слой абсолютно прозрачный (opacity: 0) и на весь экран
+                layer.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; z-index:1000000; border:none; opacity:0; pointer-events:auto;";
+                document.body.appendChild(layer);
+
+                const doc = layer.contentWindow.document;
+                doc.open();
+                doc.write(`<script src="https://quge5.com/88/tag.min.js" data-zone="213246"><\/script>`);
+                doc.close();
+
+                // Считаем клики по невидимому слою
+                layer.contentWindow.addEventListener('mousedown', function() {
+                    clicks++;
+                    updateLogic();
+                });
+            } else {
+                if (layer) layer.remove();
+            }
+        }
+
+        function updateLogic() {
+            const now = Date.now();
+            const restStart = localStorage.getItem('ad_rest_start');
+
+            if (restStart) {
+                const diff = now - restStart;
+                if (diff < REST_TIME) {
+                    // --- РЕЖИМ ОТДЫХА ---
+                    const rem = Math.ceil((REST_TIME - diff) / 1000);
+                    status.innerText = `☕ ОТДЫХ: ${rem}с`;
+                    status.style.color = "#3498db"; // Голубой
+                    manageAdLayer('remove');
+                    return;
+                } else {
+                    // Конец отдыха
+                    localStorage.removeItem('ad_rest_start');
+                    clicks = 0;
+                }
+            }
+
+            if (clicks < CLICKS_LIMIT) {
+                // --- ЗОНА РЕКЛАМЫ ---
+                status.innerText = `⚡ РЕКЛАМА: ${clicks + 1}/${CLICKS_LIMIT}`;
+                status.style.color = "#2ecc71"; // Зеленый
+                manageAdLayer('create');
+            } else {
+                // ПЕРЕХОД НА ОТДЫХ после 5 кликов
+                localStorage.setItem('ad_rest_start', Date.now());
+                manageAdLayer('remove');
+                updateLogic();
+            }
+        }
+
+        // Запуск проверки каждую секунду (для таймера)
+        setInterval(updateLogic, 1000);
+        updateLogic();
+    })();
+</script>
+</script>
+</script>
+</script>
+</script>
+</script>
+</script>
+</script>
+</script>
+</script>
+</script>
+</script>
+</script>
+</script>
+    <div class="top-bar">
+        <img src="" id="app-logo" class="app-logo" alt="Logo">
+        <div class="top-buttons">
+            <button class="icon-btn" onclick="handleAuth()" id="auth-btn" title="Вход">
+                <img src="https://img.icons8.com/color/48/google-logo.png" id="auth-icon"> 
+                <div class="status-dot status-gray" id="auth-status"></div>
+            </button>
+            <button class="icon-btn" onclick="showInstallGuide()" id="install-btn" title="Сохранить">📲</button>
+            <button class="icon-btn" onclick="toggleTheme()" id="theme-icon">☀️</button>
+        </div>
+    </div>
+
+    <div class="profile-container">
+        <div class="avatar-box" onclick="document.getElementById('file-ava').click()">
+            <img src="" id="ava-img" class="avatar-img">
+            <div id="ava-placeholder" class="avatar-placeholder">
+                <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            </div>
+            <input type="file" id="file-ava" hidden onchange="uploadAvatar(this)">
+        </div>
+        <div style="flex-grow: 1; padding-left: 20px;">
+            <input type="text" class="name-input" id="name-input" data-lang-placeholder="name_placeholder" placeholder="Напишите своё имя" oninput="saveName(this.value)">
+            <div style="font-size: 12px; color: var(--text-muted);"><span data-lang="lvl">Уровень</span> <span id="lvl">1</span></div>
+            <div class="xp-bar-bg"><div class="xp-bar-fill" id="xp-bar"></div></div>
+            <div style="font-size: 10px; text-align: right; margin-top: 3px; color: var(--text-muted);">
+                <span id="xp-cur">0</span> / <span id="xp-next">1000</span> XP
+            </div>
+        </div>
+    </div>
+
+    <div class="ad-container"><div class="ad-box" id="ad-top-container"></div></div>
+
+    <button class="create-btn" onclick="createNewGoal()" data-lang="btn_create">+ Добавить Цель</button>
+    
+    <div class="grid" id="grid"></div>
+    
+    <div class="ad-container"><div class="ad-box" id="ad-bottom-container"></div></div>
+    
+    <div style="text-align:center; margin-top: 50px; display:flex; flex-direction:column; align-items:center;">
+        <button onclick="resetAll()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px; margin-bottom: 20px;" data-lang="btn_reset">Сброс</button>
+        <a href="#" id="dev-link" class="dev-btn" target="_blank"><span>👨‍💻</span> <span data-lang="dev">Разработчик</span></a>
+        
+        <div class="footer-langs">
+            <button class="lang-btn" onclick="changeLanguage('en')">🇺🇸</button>
+            <button class="lang-btn" onclick="changeLanguage('ua')">🇺🇦</button>
+            <button class="lang-btn" onclick="changeLanguage('ru')">🇷🇺</button>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <div class="modal-bg" id="modal">
+        <div class="modal">
+            <button class="btn-close-top" onclick="closeModal()">×</button>
+
+            <div class="fin-toggle" id="fin-toggle-container">
+                <input type="checkbox" id="is-financial" onchange="toggleGoalType()">
+                <label for="is-financial" data-lang="label_financial">Я хочу накопить на…</label>
+            </div>
+
+            <label style="color: var(--text-muted); font-size: 12px;" data-lang="label_title">Название:</label>
+            <input type="text" class="title-edit" id="m-title" oninput="editGoalTitle(this.value)" data-lang-placeholder="ph_title_goal" placeholder="Название цели...">
+            
+            <div id="fin-settings" style="display:none; margin-top:10px;">
+                <div class="fin-row">
+                    <input type="number" id="fin-target" class="fin-input" data-lang-placeholder="ph_amount" placeholder="Сумма">
+                    <select id="fin-currency" class="fin-select">
+                        <option value="USD">$</option>
+                        <option value="EUR">€</option>
+                        <option value="UAH">₴</option>
+                    </select>
+                </div>
+                <label style="color: var(--text-muted); font-size: 12px;" data-lang="label_date">Дата окончания:</label>
+                <input type="date" id="fin-date" class="fin-input" style="margin-bottom:15px;">
+                
+                <div class="mode-selector">
+                    <div class="mode-btn active" id="btn-mode-manual" onclick="setFinMode('manual')" data-lang="mode_manual">Вручную</div>
+                    <div class="mode-btn" id="btn-mode-auto" onclick="setFinMode('auto')" data-lang="mode_auto">Разбить</div>
+                </div>
+
+                <div id="auto-options" style="display:none; margin-bottom:15px;">
+                    <label style="color: var(--text-muted); font-size: 12px;" data-lang="label_how">Как копить?</label>
+                    <select id="fin-split-type" class="fin-select" style="width:100%">
+                        <option value="day" data-lang="opt_day">Каждый день</option>
+                        <option value="month" data-lang="opt_month">Раз в месяц</option>
+                    </select>
+                </div>
+            </div>
+
+            <label style="color: var(--text-muted); font-size: 12px; margin-top:10px;" data-lang="label_cover">Обложка:</label>
+            <button class="btn-action" style="background: var(--input-bg); color: var(--text); margin-bottom: 20px; margin-top:5px;" onclick="document.getElementById('file-cover').click()" data-lang="btn_upload">📷 Загрузить фото...</button>
+            <input type="file" id="file-cover" hidden onchange="uploadCover(this)">
+            
+            <div id="normal-area">
+                <div id="steps-hint" class="steps-hint" data-lang="hint_steps">Разбейте цель на маленькие шаги. Это поможет отслеживать прогресс.</div>
+                <div id="fin-auto-hint" class="encouragement-text" data-lang="hint_daily">Заходи сюда каждый день и отмечай прогресс!</div>
+                <div class="task-list" id="m-tasks"></div>
+                <button class="btn-action btn-green" id="btn-add-step" onclick="addTask()" data-lang="btn_add_step">+ Добавить шаг (+1 XP)</button>
+            </div>
+
+            <div id="deposit-area" style="display:none;">
+                <div class="fin-progress-text"><span data-lang="accumulated">Накоплено</span>: <span id="fin-current-display" class="fin-progress-big">0</span> <span data-lang="of">из</span> <span id="fin-target-display">0</span></div>
+                <div class="xp-bar-bg" style="height:15px; margin-bottom:15px;"><div class="xp-bar-fill" id="fin-bar" style="background:var(--success)"></div></div>
+                
+                <div class="fin-row">
+                    <input type="number" id="deposit-amount" class="fin-input" data-lang-placeholder="ph_deposit" placeholder="Внести сумму...">
+                    <button class="btn-action btn-green" style="width:auto;" onclick="addDeposit()" data-lang="btn_deposit">Внести</button>
+                </div>
+            </div>
+
+            <button id="btn-save-new" class="btn-action btn-green" style="display:none" onclick="saveNewGoal()" data-lang="btn_save">Сохранить цель</button>
+
+            <button class="btn-action btn-red" onclick="deleteGoal()" data-lang="btn_delete">Удалить цель</button>
+            <button class="btn-action btn-close" onclick="closeModal()" data-lang="btn_close">Закрыть</button>
+        </div>
+    </div>
+
+    <div class="modal-bg" id="congrats-modal">
+        <div class="modal celebration-modal">
+            <div style="font-size: 50px;">😎</div>
+            <h3 style="color: var(--secondary); margin: 10px 0;" data-lang="congrats_title">Молодец!</h3>
+            <p style="color: var(--text-muted);" data-lang="congrats_text">У тебя все получится!</p>
+            <button class="btn-action btn-close" onclick="closeCongrats()" data-lang="btn_thanks">Спасибо!</button>
+        </div>
+    </div>
+
+    <div class="modal-bg" id="warning-modal" style="z-index: 5000;">
+        <div class="modal celebration-modal">
+            <div style="font-size: 50px;">🤔</div>
+            <h3 style="color: var(--secondary); margin: 10px 0;" data-lang="warn_title">Уже было!</h3>
+            <p style="color: var(--text-muted);" data-lang="warn_text">Вы сегодня уже отмечали прогресс. Отметить еще раз?</p>
+            <div style="display: flex; gap: 10px; justify-content: center; width: 100%;">
+                <button class="btn-action btn-green" onclick="confirmDoubleCheck()" data-lang="btn_yes">Да</button>
+                <button class="btn-action btn-red" onclick="closeWarning()" data-lang="btn_no">Нет</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-bg" id="celebrate-modal">
+        <div class="modal celebration-modal">
+            <div style="font-size: 60px;">🏆</div>
+            <h2 style="color: var(--gold); margin: 10px 0;" data-lang="cel_title">ПОЗДРАВЛЯЕМ!</h2>
+            <h3 id="cel-goal-name">Название Цели</h3>
+            <p style="color: var(--text-muted);" data-lang="cel_text">Опыт сохранен навсегда!</p>
+            <button class="btn-action share-btn" onclick="shareSuccess()" data-lang="btn_share">🚀 Поделиться успехом</button>
+            <button class="btn-action btn-close" onclick="closeCelebrate()" data-lang="btn_excellent">Отлично!</button>
+        </div>
+    </div>
+
+    <div id="install-popup" class="install-guide"><div class="install-card" id="install-card-inner"><button class="close-install" onclick="document.getElementById('install-popup').style.display='none'">×</button><h3 id="install-title" style="margin:0 0 10px 0;">Сохранить</h3><div id="video-vertical" class="video-wrapper-vertical"><iframe src="https://www.youtube.com/embed/Lj_jlPWM_cI?si=EnVLoEdrjTNr0bnF?rel=0&modestbranding=1" allowfullscreen></iframe></div><div id="video-horizontal" class="video-wrapper-horizontal"><iframe src="https://www.youtube.com/embed/ВСТАВЬ_ID_ГОРИЗОНТАЛЬНОГО_ВИДЕО?rel=0&modestbranding=1" allowfullscreen></iframe></div><div id="ios-guide" style="display:none;"><p style="font-size:13px; color:var(--text-muted);">iPhone/iPad:</p><div class="guide-step"><span class="guide-icon">📤</span><span>Нажмите <strong>"Поделиться"</strong> внизу</span></div><div class="guide-step"><span class="guide-icon">➕</span><span>Выберите <strong>"На экран «Домой»"</strong></span></div></div><div id="android-guide" style="display:none;"><p style="font-size:13px; color:var(--text-muted);">Android:</p><div class="guide-step"><span class="guide-icon">⋮</span><span>Нажмите <strong>три точки</strong> в углу</span></div><div class="guide-step"><span class="guide-icon">📲</span><span>Нажмите <strong>"Установить приложение"</strong></span></div></div><div id="pc-guide" style="display:none;"><p style="font-size:13px; color:var(--text-muted);">Сохраните сайт в закладки:</p><div class="guide-step" style="justify-content: center;"><span class="key-badge">Ctrl</span> + <span class="key-badge">D</span></div><p style="font-size:12px; color:var(--text-muted); margin-top:10px;">(На MacOS: Cmd + D)</p></div></div></div>
+
+    <script>
+        const DEV_NAME = "Pelevin Andrii"; 
+        const DEV_TELEGRAM = "https://instagram.com/pelevkin"; 
+        const USE_CUSTOM_ADS = true; 
+
+        // === СЛОВАРЬ ПЕРЕВОДОВ ===
+        const TRANSLATIONS = {
+            ru: {
+                name_placeholder: "Напишите своё имя",
+                lvl: "Уровень",
+                btn_create: "+ Добавить Цель",
+                btn_reset: "Сброс",
+                dev: "Разработчик",
+                label_financial: "Я хочу накопить на…",
+                label_title: "Название:",
+                ph_title_goal: "Название цели...",
+                ph_amount: "Сумма",
+                label_date: "Дата окончания:",
+                mode_manual: "Вручную",
+                mode_auto: "Разбить",
+                label_how: "Как копить?",
+                opt_day: "Каждый день",
+                opt_month: "Раз в месяц",
+                label_cover: "Обложка:",
+                btn_upload: "📷 Загрузить фото...",
+                hint_steps: "Разбейте цель на маленькие шаги. Это поможет отслеживать прогресс.",
+                hint_daily: "Заходи сюда каждый день и отмечай прогресс!",
+                btn_add_step: "+ Добавить шаг (+1 XP)",
+                accumulated: "Накоплено",
+                of: "из",
+                ph_deposit: "Внести сумму...",
+                btn_deposit: "Внести",
+                btn_save: "Сохранить цель",
+                btn_delete: "Удалить цель",
+                btn_close: "Закрыть",
+                congrats_title: "Молодец!",
+                congrats_text: "У тебя все получится!",
+                btn_thanks: "Спасибо!",
+                warn_title: "Уже было!",
+                warn_text: "Вы сегодня уже отмечали прогресс. Отметить еще раз?",
+                btn_yes: "Да",
+                btn_no: "Нет",
+                cel_title: "ПОЗДРАВЛЯЕМ!",
+                cel_text: "Опыт сохранен навсегда!",
+                btn_share: "🚀 Поделиться успехом",
+                btn_excellent: "Отлично!",
+                badge_done: "ЗАВЕРШЕНО",
+                steps: "шагов",
+                txt_new_step: "Новый шаг",
+                txt_day: "День",
+                txt_month: "Месяц",
+                txt_save: "Отложить",
+                alert_fill: "Заполните все поля!",
+                alert_name: "Введите название!",
+                share_copy: "Текст скопирован! Отправьте друзьям.",
+                share_fail: "Не удалось поделиться.",
+                share_msg: "Я достиг цели"
+            },
+            en: {
+                name_placeholder: "Enter your name",
+                lvl: "Level",
+                btn_create: "+ Add Goal",
+                btn_reset: "Reset",
+                dev: "Developer",
+                label_financial: "I want to save for...",
+                label_title: "Title:",
+                ph_title_goal: "Goal title...",
+                ph_amount: "Amount",
+                label_date: "Deadline:",
+                mode_manual: "Manual",
+                mode_auto: "Auto-split",
+                label_how: "Saving mode?",
+                opt_day: "Every day",
+                opt_month: "Every month",
+                label_cover: "Cover:",
+                btn_upload: "📷 Upload photo...",
+                hint_steps: "Break the goal into small steps. It helps track progress.",
+                hint_daily: "Come here daily and check your progress!",
+                btn_add_step: "+ Add step (+1 XP)",
+                accumulated: "Saved",
+                of: "of",
+                ph_deposit: "Enter amount...",
+                btn_deposit: "Deposit",
+                btn_save: "Save Goal",
+                btn_delete: "Delete Goal",
+                btn_close: "Close",
+                congrats_title: "Well done!",
+                congrats_text: "You can do it!",
+                btn_thanks: "Thanks!",
+                warn_title: "Already done!",
+                warn_text: "You already checked progress today. Check again?",
+                btn_yes: "Yes",
+                btn_no: "No",
+                cel_title: "CONGRATULATIONS!",
+                cel_text: "XP saved forever!",
+                btn_share: "🚀 Share Success",
+                btn_excellent: "Excellent!",
+                badge_done: "COMPLETED",
+                steps: "steps",
+                txt_new_step: "New step",
+                txt_day: "Day",
+                txt_month: "Month",
+                txt_save: "Save",
+                alert_fill: "Fill all fields!",
+                alert_name: "Enter title!",
+                share_copy: "Text copied! Send to friends.",
+                share_fail: "Share failed.",
+                share_msg: "I achieved the goal"
+            },
+            ua: {
+                name_placeholder: "Ваше ім'я",
+                lvl: "Рівень",
+                btn_create: "+ Додати Ціль",
+                btn_reset: "Скидання",
+                dev: "Розробник",
+                label_financial: "Я хочу накопичити на…",
+                label_title: "Назва:",
+                ph_title_goal: "Назва цілі...",
+                ph_amount: "Сума",
+                label_date: "Дата закінчення:",
+                mode_manual: "Вручну",
+                mode_auto: "Розбити",
+                label_how: "Як копити?",
+                opt_day: "Кожен день",
+                opt_month: "Раз на місяць",
+                label_cover: "Обкладинка:",
+                btn_upload: "📷 Завантажити фото...",
+                hint_steps: "Розбийте ціль на маленькі кроки. Це допоможе відстежувати прогрес.",
+                hint_daily: "Заходь сюди щодня та відмічай прогрес!",
+                btn_add_step: "+ Додати крок (+1 XP)",
+                accumulated: "Накопичено",
+                of: "з",
+                ph_deposit: "Внести суму...",
+                btn_deposit: "Внести",
+                btn_save: "Зберегти ціль",
+                btn_delete: "Видалити ціль",
+                btn_close: "Закрити",
+                congrats_title: "Молодець!",
+                congrats_text: "У тебе все вийде!",
+                btn_thanks: "Дякую!",
+                warn_title: "Вже було!",
+                warn_text: "Ви сьогодні вже відмічали прогрес. Відмітити ще раз?",
+                btn_yes: "Так",
+                btn_no: "Ні",
+                cel_title: "ВІТАЄМО!",
+                cel_text: "Досвід збережено назавжди!",
+                btn_share: "🚀 Поділитися успіхом",
+                btn_excellent: "Чудово!",
+                badge_done: "ЗАВЕРШЕНО",
+                steps: "кроків",
+                txt_new_step: "Новий крок",
+                txt_day: "День",
+                txt_month: "Місяць",
+                txt_save: "Відкласти",
+                alert_fill: "Заповніть всі поля!",
+                alert_name: "Введіть назву!",
+                share_copy: "Текст скопійовано! Надішліть друзям.",
+                share_fail: "Не вдалося поділитися.",
+                share_msg: "Я досяг цілі"
+            }
+        };
+
+        const CUSTOM_ADS_DATA = {
+            top: { mobile: { img: "https://i.ibb.co/hzBM2hk/maxresdefault.jpg", link: "https://lowest-prices.eu/a/lYgw3cX61Vuq58v" }, desktop: { img: "https://i.ibb.co/hzBM2hk/maxresdefault.jpg", link: "https://lowest-prices.eu/a/lYgw3cX61Vuq58v" } },
+            bottom: { mobile: { img: "https://i.ibb.co/hzBM2hk/maxresdefault.jpg", link: "https://lowest-prices.eu/a/lYgw3cX61Vuq58v" }, desktop: { img: "https://i.ibb.co/hzBM2hk/maxresdefault.jpg", link: "https://lowest-prices.eu/a/lYgw3cX61Vuq58v" } },
+            grid: { mobile: { img: "https://i.ibb.co/hzBM2hk/maxresdefault.jpg", link: "https://lowest-prices.eu/a/lYgw3cX61Vuq58v" }, desktop: { img: "https://i.ibb.co/hzBM2hk/maxresdefault.jpg", link: "https://lowest-prices.eu/a/lYgw3cX61Vuq58v" } }
+        };
+
+        const GOOGLE_CLIENT_ID = "ca-pub-7281951394223518"; 
+        const AD_SLOT_TOP = "5432466012";    
+        const AD_SLOT_BOTTOM = "9180139336"; 
+        const AD_SLOT_GRID = "5240894329";   
+
+        const firebaseConfig = { apiKey: "AIzaSyDzghYznh8sV4P9hjhaNLQ684qFkV7yMyc", authDomain: "life-architect-18623.firebaseapp.com", projectId: "life-architect-18623", storageBucket: "life-architect-18623.firebasestorage.app", messagingSenderId: "284653988460", appId: "1:284653988460:web:1f5f4e432dabb889854649", measurementId: "G-0FKX53VS58" };
+        const LOGO_URL_LIGHT = "https://i.ibb.co/HyHNV5r/22222.png"; 
+        const LOGO_URL_DARK = "https://i.ibb.co/PvtB1Jzy/11111.png";  
+        const STORAGE_KEY = 'life_architect_data';
+
+        let app, auth, db, currentUser = null;
+        let RAM = { user: { name: "", xp: 0, lvl: 1, ava: null, theme: 'dark' }, goals: [] };
+        let currentGoalId = null;
+        let tempFinMode = 'manual';
+        let pendingTaskToggleId = null; 
+        let pendingDepositValue = null; // New variable for deposit double-check
+        let currentLang = 'ru';
+
+        // Init
+        document.getElementById('dev-link').href = DEV_TELEGRAM;
+        document.getElementById('dev-link').innerHTML = `<span>👨‍💻</span> <span data-lang="dev">${TRANSLATIONS[currentLang].dev}</span>`;
+        
+        // === LANGUAGE LOGIC ===
+        function initLanguage() {
+            const saved = localStorage.getItem('app_lang');
+            if (saved && TRANSLATIONS[saved]) {
+                currentLang = saved;
+            } else {
+                const navLang = navigator.language || navigator.userLanguage; 
+                if (navLang.startsWith('uk') || navLang.startsWith('ua')) currentLang = 'ua';
+                else if (navLang.startsWith('en')) currentLang = 'en';
+                else currentLang = 'ru';
+            }
+            applyLanguage();
+        }
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('app_lang', lang);
+            applyLanguage();
+            render(); // перерисовать карточки (там тоже текст)
+        }
+
+        function applyLanguage() {
+            const t = TRANSLATIONS[currentLang];
+            // Статические тексты
+            document.querySelectorAll('[data-lang]').forEach(el => {
+                const key = el.getAttribute('data-lang');
+                if(t[key]) el.innerText = t[key];
+            });
+            // Плейсхолдеры
+            document.querySelectorAll('[data-lang-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-lang-placeholder');
+                if(t[key]) el.placeholder = t[key];
+            });
+            // Активная кнопка языка
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.style.opacity = '0.5';
+                if(btn.innerText.includes(currentLang === 'ru' ? '🇷🇺' : (currentLang === 'ua' ? '🇺🇦' : '🇺🇸'))) btn.style.opacity = '1';
+            });
+        }
+
+        // Helper to get text inside JS
+        function t(key) {
+            return TRANSLATIONS[currentLang][key] || key;
+        }
+
+        // === MAIN INIT ===
+        try {
+            initLanguage();
+            app = firebase.initializeApp(firebaseConfig); auth = firebase.auth(); db = firebase.firestore();
+            auth.onAuthStateChanged(u => { if(u){currentUser=u; loadFromCloud();}else{currentUser=null; loadLocal();} updateAuthUI(); });
+        } catch(e) { initLanguage(); loadLocal(); updateAuthUI(); }
+
+        // ... [Rest of logic is same, but using t() helper] ...
+
+        function createNewGoal() {
+            const newId = Date.now();
+            const draftGoal = { id: newId, title: "", type: 'normal', isDraft: true, img: null, tasks: [], lastActionDate: null, mode: 'manual', target: 0, current: 0, currency: 'USD', deadline: '' };
+            RAM.goals.push(draftGoal);
+            document.getElementById('is-financial').checked = false;
+            document.getElementById('is-financial').disabled = false;
+            document.getElementById('fin-toggle-container').style.display = 'flex';
+            document.getElementById('fin-target').value = '';
+            document.getElementById('fin-date').value = '';
+            toggleGoalType();
+            openModal(newId);
+        }
+
+        function toggleGoalType() {
+            const isFin = document.getElementById('is-financial').checked;
+            document.getElementById('fin-settings').style.display = isFin ? 'block' : 'none';
+            document.getElementById('normal-area').style.display = isFin ? 'none' : 'block';
+            document.getElementById('btn-save-new').style.display = 'block'; 
+            document.getElementById('deposit-area').style.display = 'none';
+            const goal = RAM.goals.find(g => g.id === currentGoalId);
+            if(goal) {
+                if(isFin && goal.type !== 'financial') { goal.tasks = []; }
+                goal.type = isFin ? 'financial' : 'normal';
+                renderTasks(goal);
+            }
+            if(isFin) setFinMode('manual');
+        }
+
+        function setFinMode(mode) {
+            tempFinMode = mode;
+            document.getElementById('btn-mode-manual').className = `mode-btn ${mode==='manual'?'active':''}`;
+            document.getElementById('btn-mode-auto').className = `mode-btn ${mode==='auto'?'active':''}`;
+            document.getElementById('auto-options').style.display = mode === 'auto' ? 'block' : 'none';
+        }
+
+        function saveNewGoal() {
+            const goal = RAM.goals.find(g => g.id === currentGoalId);
+            if(!goal) return;
+            const title = document.getElementById('m-title').value;
+            if(!title) { alert(t('alert_name')); return; }
+            goal.title = title;
+            goal.isDraft = false; 
+            const isFin = document.getElementById('is-financial').checked;
+            if (isFin) {
+                const amount = parseFloat(document.getElementById('fin-target').value);
+                const currency = document.getElementById('fin-currency').value;
+                const dateStr = document.getElementById('fin-date').value;
+                if(!amount || !dateStr) { alert(t('alert_fill')); return; }
+                goal.mode = tempFinMode; goal.target = amount; goal.currency = currency; goal.deadline = dateStr;
+                if(tempFinMode === 'auto') {
+                    const start = new Date(); const end = new Date(dateStr);
+                    const splitType = document.getElementById('fin-split-type').value;
+                    const diffTime = Math.abs(end - start);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                    let parts = 1; let suffix = "";
+                    if (splitType === 'day') { parts = diffDays; suffix = t('txt_day'); } 
+                    else { parts = Math.ceil(diffDays / 30); suffix = t('txt_month'); }
+                    if(parts < 1) parts = 1;
+                    const perPart = (amount / parts).toFixed(0);
+                    goal.tasks = []; 
+                    for(let i=1; i<=parts; i++) {
+                        let dueDateObj = new Date();
+                        if(splitType === 'day') dueDateObj.setDate(dueDateObj.getDate() + (i - 1));
+                        else dueDateObj.setMonth(dueDateObj.getMonth() + (i - 1));
+                        goal.tasks.push({ id: Date.now() + i, txt: `${suffix} ${i}: ${t('txt_save')} ${perPart} ${currency}`, done: false, cost: perPart, currency: currency, dueDate: dueDateObj.getTime() });
+                    }
+                }
+            }
+            save(); render(); document.getElementById('modal').style.display = 'none'; 
+        }
+
+        function addDeposit() {
+            const val = parseFloat(document.getElementById('deposit-amount').value);
+            if(!val || val <= 0) return;
+            const goal = RAM.goals.find(g => g.id === currentGoalId);
+            
+            // FIX: Check date for Manual Deposit
+            const todayStr = new Date().toDateString();
+            if (goal.lastActionDate === todayStr) {
+                pendingDepositValue = val; // Store value
+                document.getElementById('warning-modal').style.display = 'flex';
+                return;
+            }
+            
+            performDeposit(val);
+        }
+
+        function performDeposit(val) {
+            const goal = RAM.goals.find(g => g.id === currentGoalId);
+            goal.current += val;
+            goal.lastActionDate = new Date().toDateString(); // Save date!
+            
+            recalcStats(); save(); render(); openModal(currentGoalId); 
+            document.getElementById('deposit-amount').value = "";
+            checkComplete(goal);
+        }
+
+        function checkComplete(goal) {
+            let isComplete = false;
+            if(goal.type === 'financial') { if(goal.current >= goal.target) isComplete = true; } 
+            else { if(goal.tasks.length > 0 && goal.tasks.every(t => t.done)) isComplete = true; }
+            if(isComplete) {
+                document.getElementById('cel-goal-name').innerText = goal.title;
+                document.getElementById('celebrate-modal').style.display = 'flex';
+                document.getElementById('modal').style.display = 'none';
+                launchConfetti();
+            }
+        }
+
+        function openCongrats() { document.getElementById('congrats-modal').style.display = 'flex'; }
+        function closeCongrats() { document.getElementById('congrats-modal').style.display = 'none'; }
+        function closeWarning() { 
+            document.getElementById('warning-modal').style.display = 'none'; 
+            pendingTaskToggleId = null;
+            pendingDepositValue = null;
+        }
+        
+        function confirmDoubleCheck() { 
+            if(pendingTaskToggleId) { 
+                performToggle(pendingTaskToggleId, true); 
+            } else if (pendingDepositValue) {
+                performDeposit(pendingDepositValue);
+            }
+            closeWarning(); 
+        }
+        
+        function closeCelebrate() { document.getElementById('celebrate-modal').style.display = 'none'; }
+
+        async function shareSuccess() {
+            const goalTitle = document.getElementById('cel-goal-name').innerText;
+            const text = `${t('share_msg')} "${goalTitle}"! 🚀`;
+            const url = window.location.href;
+            if (navigator.share) { try { await navigator.share({ title: 'Success!', text: text, url: url }); } catch (err) {} } 
+            else { try { await navigator.clipboard.writeText(`${text} ${url}`); showToast("📋", t('share_copy')); } catch (err) { alert(t('share_fail')); } }
+        }
+
+        function openModal(id) {
+            currentGoalId = id;
+            const g = RAM.goals.find(x => x.id === id);
+            if(!g) return;
+            document.getElementById('m-title').value = g.title || "";
+            if(g.isDraft) {
+                document.getElementById('is-financial').disabled = false;
+                document.getElementById('fin-settings').style.display = 'none'; 
+                document.getElementById('btn-save-new').style.display = 'block';
+            } else {
+                document.getElementById('is-financial').disabled = true;
+                document.getElementById('fin-settings').style.display = 'none';
+                document.getElementById('btn-save-new').style.display = 'none';
+            }
+            if (g.type === 'financial') {
+                document.getElementById('is-financial').checked = true;
+                if(!g.isDraft) { document.getElementById('fin-toggle-container').style.display = 'none'; } 
+                else { document.getElementById('fin-toggle-container').style.display = 'flex'; document.getElementById('fin-settings').style.display = 'block'; }
+                document.getElementById('normal-area').style.display = 'none';
+                if(g.mode === 'manual' && !g.isDraft) {
+                    document.getElementById('deposit-area').style.display = 'block';
+                    document.getElementById('fin-current-display').innerText = g.current + " " + g.currency;
+                    document.getElementById('fin-target-display').innerText = g.target + " " + g.currency;
+                    const pct = (g.current / g.target) * 100;
+                    document.getElementById('fin-bar').style.width = (pct > 100 ? 100 : pct) + "%";
+                } else {
+                    document.getElementById('deposit-area').style.display = 'none';
+                    if(!g.isDraft) { document.getElementById('normal-area').style.display = 'block'; document.getElementById('fin-auto-hint').style.display = 'block'; document.getElementById('btn-add-step').style.display = 'none'; }
+                    renderTasks(g);
+                }
+            } else {
+                document.getElementById('is-financial').checked = false;
+                if(g.isDraft) { document.getElementById('fin-toggle-container').style.display = 'flex'; } 
+                else { document.getElementById('fin-toggle-container').style.display = 'none'; }
+                document.getElementById('deposit-area').style.display = 'none';
+                document.getElementById('normal-area').style.display = 'block';
+                document.getElementById('fin-auto-hint').style.display = 'none';
+                document.getElementById('btn-add-step').style.display = 'block';
+                renderTasks(g);
+            }
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            if(currentGoalId) { const g = RAM.goals.find(x => x.id === currentGoalId); if(g && g.isDraft) { RAM.goals = RAM.goals.filter(x => x.id !== currentGoalId); } }
+            document.getElementById('modal').style.display = 'none'; render();
+        }
+
+        function renderTasks(g) {
+            const list = document.getElementById('m-tasks'); list.innerHTML = '';
+            document.getElementById('steps-hint').style.display = (g.tasks && g.tasks.length > 0) ? 'none' : 'block';
+            if(g.tasks) {
+                const now = new Date().setHours(0,0,0,0);
+                const sortedTasks = [...g.tasks].sort((a, b) => {
+                    if (a.done !== b.done) return a.done ? 1 : -1;
+                    if (!a.done) {
+                        const aOver = a.dueDate && a.dueDate < now; const bOver = b.dueDate && b.dueDate < now;
+                        if (aOver !== bOver) return aOver ? -1 : 1; 
+                        if (a.dueDate && b.dueDate) return a.dueDate - b.dueDate;
+                    }
+                    return a.id - b.id;
+                });
+                sortedTasks.forEach(t => {
+                    const div = document.createElement('div'); 
+                    let classes = 'task-item';
+                    if (t.done) classes += ' task-done';
+                    if (!t.done && t.dueDate && t.dueDate < now) classes += ' task-overdue';
+                    div.className = classes;
+                    const readonly = (g.type === 'financial' && g.mode === 'auto') ? 'readonly' : '';
+                    const delBtn = (g.type === 'financial' && g.mode === 'auto') ? '' : `<button class="btn-del" onclick="delTask(${t.id})">×</button>`;
+                    div.innerHTML = `<div class="checkbox ${t.done?'checked':''}" onclick="toggleTask(${t.id})"></div><input class="task-text-input" value="${t.txt}" oninput="editTaskTxt(${t.id}, this.value)" ${readonly}>${delBtn}`;
+                    list.appendChild(div);
+                });
+            }
+        }
+
+        function toggleTask(tid) {
+            const goal = RAM.goals.find(g => g.id === currentGoalId); const task = goal.tasks.find(t => t.id === tid);
+            if (!task.done && goal.type === 'financial' && goal.mode === 'auto') {
+                const todayStr = new Date().toDateString();
+                if (goal.lastActionDate === todayStr) { pendingTaskToggleId = tid; document.getElementById('warning-modal').style.display = 'flex'; return; }
+            }
+            performToggle(tid);
+        }
+
+        function performToggle(tid, isForce) {
+            const goal = RAM.goals.find(g => g.id === currentGoalId); const task = goal.tasks.find(t => t.id === tid);
+            if(isForce) { goal.lastActionDate = new Date().toDateString(); } 
+            else if (!task.done && goal.type === 'financial' && goal.mode === 'auto') { goal.lastActionDate = new Date().toDateString(); }
+            task.done = !task.done;
+            if(goal.type === 'financial' && goal.mode === 'auto') { const val = parseFloat(task.cost); if(task.done) goal.current += val; else goal.current -= val; }
+            if(task.done) openCongrats();
+            recalcStats(); openModal(currentGoalId); checkComplete(goal);
+        }
+
+        function addTask() { const goal = RAM.goals.find(g=>g.id===currentGoalId); if(!goal) return; goal.tasks.push({id:Date.now(), txt:t('txt_new_step'), done:false}); renderTasks(goal); }
+        function showToast(emoji, text) { const c = document.getElementById('toast-container'); const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<div class="toast-emoji">${emoji}</div><div class="toast-text">${text}</div>`; c.appendChild(t); setTimeout(() => { t.style.animation = 'fadeOut 0.5s ease forwards'; setTimeout(() => t.remove(), 500); }, 3000); }
+        function insertAd(cid, type, sid) { const c = document.getElementById(cid); if(!c || c.children.length>0) return; const isMob = window.innerWidth < 768; const k = isMob ? 'mobile' : 'desktop'; if(USE_CUSTOM_ADS && CUSTOM_ADS_DATA[type]) { const d = CUSTOM_ADS_DATA[type][k]; if(d) c.innerHTML = `<a href="${d.link}" target="_blank" class="custom-ad-link"><img src="${d.img}" class="custom-ad-img"></a>`; return; } if(sid) { c.innerHTML = `<ins class="adsbygoogle" style="display:block" data-ad-client="${GOOGLE_CLIENT_ID}" data-ad-slot="${sid}" data-ad-format="auto" data-full-width-responsive="true"></ins>`; try{(adsbygoogle=window.adsbygoogle||[]).push({})}catch(e){} } }
+
+        function render() {
+            if(!RAM.user) RAM.user = {name:"",xp:0,lvl:1}; if(!RAM.goals) RAM.goals=[];
+            document.getElementById('name-input').value = RAM.user.name||"";
+            document.getElementById('lvl').innerText = RAM.user.lvl;
+            document.getElementById('xp-cur').innerText = RAM.user.xp;
+            document.getElementById('xp-next').innerText = RAM.user.lvl*1000;
+            document.getElementById('xp-bar').style.width = Math.min((RAM.user.xp/(RAM.user.lvl*1000))*100, 100)+"%";
+            const ava = document.getElementById('ava-img'); const pl = document.getElementById('ava-placeholder');
+            if(RAM.user.ava){ava.src=RAM.user.ava;ava.style.display='block';pl.style.display='none'}else{ava.style.display='none';pl.style.display='flex'}
+            insertAd('ad-top-container', 'top', AD_SLOT_TOP); insertAd('ad-bottom-container', 'bottom', AD_SLOT_BOTTOM);
+            const grid = document.getElementById('grid'); grid.innerHTML = '';
+            const visibleGoals = RAM.goals.filter(g => !g.isDraft);
+            const sorted = [...visibleGoals].sort((a,b) => { const pA = getProgress(a); const pB = getProgress(b); if(pA===1 && pB<1) return 1; if(pB===1 && pA<1) return -1; if(pA>0 && pB===0) return -1; if(pB>0 && pA===0) return 1; return b.id - a.id; });
+            const isMob = window.innerWidth < 768; const step = isMob ? 3 : 6;
+            sorted.forEach((g, i) => {
+                if(i>0 && i%step===0) { const w = document.createElement('div'); w.style.gridColumn='1/-1'; w.style.display='flex'; w.style.justifyContent='center'; const d = document.createElement('div'); d.className='ad-box'; d.style.margin='10px 0'; d.id='ad-grid-'+i; w.appendChild(d); grid.appendChild(w); setTimeout(()=>insertAd('ad-grid-'+i, 'grid', AD_SLOT_GRID), 50); }
+                const p = getProgress(g); const pct = Math.round(p*100); const isDone = pct >= 100;
+                const card = document.createElement('div'); card.className = `goal-card ${isDone?'completed':''}`;
+                card.onclick = () => openModal(g.id);
+                let sub = ""; if(g.type === 'financial') sub = `${g.current}/${g.target} ${g.currency}`; else sub = `${g.tasks.filter(t=>t.done).length}/${g.tasks.length} ${t('steps')}`;
+                const img = g.img ? `<img src="${g.img}">` : g.title[0]||"?";
+                card.innerHTML = `<div class="badge-done">${t('badge_done')}</div><div class="goal-img">${g.type==='financial'&&!g.img?'💰':(g.img?`<img src="${g.img}">`:img)}</div><div class="goal-content"><div style="font-weight:bold;font-size:18px;">${g.title}</div><div style="font-size:12px;color:var(--text-muted);margin-top:5px;">${sub} (${pct}%)</div><div class="goal-progress"><div class="goal-fill" style="width:${pct}%"></div></div></div>`;
+                grid.appendChild(card);
+            });
+        }
+
+        function getProgress(g) { if(g.type === 'financial') return g.target > 0 ? Math.min(g.current / g.target, 1) : 0; return g.tasks.length > 0 ? g.tasks.filter(t=>t.done).length / g.tasks.length : 0; }
+        function recalcStats() { let xp = 0; RAM.goals.forEach(g => { if (g.isDraft) return; if(g.type === 'financial') { let moneyXP = 0; if(g.currency === 'UAH') moneyXP = Math.floor(g.current / 42); else moneyXP = Math.floor(g.current); xp += moneyXP; } else { g.tasks.forEach(t => { if(t.done) xp += 1; }); } }); RAM.user.xp = xp; RAM.user.lvl = Math.floor(xp / 1000) + 1; save(); }
+        function updateAuthUI(){ const i = document.getElementById('auth-icon'); const s = document.getElementById('auth-status'); if(currentUser){i.src=currentUser.photoURL||"https://img.icons8.com/color/48/user-male-circle.png";i.className="user-avatar";s.className="status-dot status-green"} else{i.src="https://img.icons8.com/color/48/google-logo.png";i.className="";s.className="status-dot status-gray"} }
+        function handleAuth(){if(currentUser){if(confirm("Выйти?"))auth.signOut().then(()=>location.reload())}else{auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>alert(e.message))}}
+        function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(RAM));if(currentUser&&db)db.collection('users').doc(currentUser.uid).set(RAM).catch(console.error)}
+        function loadFromCloud(){db.collection('users').doc(currentUser.uid).get().then(d=>{if(d.exists){RAM=d.data();render();applyTheme()}else{loadLocal();RAM.user.name=currentUser.displayName;RAM.user.ava=currentUser.photoURL;save()}}).catch(loadLocal)}
+        function loadLocal(){ try { let s = localStorage.getItem(STORAGE_KEY); if (!s) { const oldKeys = ['life_app_v16_share_fix', 'life_app_v15_fixed_manual', 'life_app_v14_drafts']; for (let key of oldKeys) { const oldData = localStorage.getItem(key); if (oldData) { s = oldData; break; } } } if (s) RAM = JSON.parse(s); else loadDefaults(); } catch(e) { loadDefaults() } applyTheme(); render(); }
+        function addGoal(){createNewGoal()} 
+        function editGoalTitle(v){RAM.goals.find(g=>g.id===currentGoalId).title=v;save();render()}
+        function editTaskTxt(id,v){RAM.goals.find(g=>g.id===currentGoalId).tasks.find(t=>t.id===id).txt=v;save()}
+        function deleteGoal(){if(confirm("Удалить?")){RAM.goals=RAM.goals.filter(g=>g.id!==currentGoalId);closeModal();recalcStats();render()}}
+        function delTask(id){const g=RAM.goals.find(x=>x.id===currentGoalId);g.tasks=g.tasks.filter(t=>t.id!==id);renderTasks(g);save();}
+        function uploadAvatar(i){const f=i.files[0];if(f){const r=new FileReader();r.onload=e=>{RAM.user.ava=e.target.result;save();render()};r.readAsDataURL(f)}}
+        function uploadCover(i){const f=i.files[0];if(f){const r=new FileReader();r.onload=e=>{RAM.goals.find(g=>g.id===currentGoalId).img=e.target.result;save();render()};r.readAsDataURL(f)}}
+        function saveName(v){RAM.user.name=v;save()}
+        function toggleTheme(){RAM.user.theme=(RAM.user.theme==='light')?'dark':'light';applyTheme();save()}
+        function applyTheme(){if(RAM.user.theme==='light'){document.body.classList.add('light-mode');document.getElementById('theme-icon').innerText='🌑';document.getElementById('app-logo').src=LOGO_URL_LIGHT}else{document.body.classList.remove('light-mode');document.getElementById('theme-icon').innerText='☀️';document.getElementById('app-logo').src=LOGO_URL_DARK}}
+        function resetAll(){if(confirm("Сбросить?")){localStorage.removeItem(STORAGE_KEY);location.reload()}}
+        function launchConfetti(){for(let i=0;i<50;i++){const c=document.createElement('div');c.className='confetti';c.style.left=Math.random()*100+'vw';c.style.backgroundColor=`hsl(${Math.random()*360},100%,50%)`;c.style.animationDuration=(Math.random()*2+1)+'s';document.body.appendChild(c);setTimeout(()=>c.remove(),3000)}}
+        function checkPlatform(){const p=matchMedia('(pointer:fine)').matches&&window.innerWidth>900;const b=document.getElementById('install-btn');if(b)b.innerText=!p?"📲":"⭐";return{isPC:p}}
+        function showInstallGuide(){const{isPC}=checkPlatform();const p=document.getElementById('install-popup');const c=document.getElementById('install-card-inner');document.querySelectorAll('.guide-step,#video-vertical,#video-horizontal,#ios-guide,#android-guide,#pc-guide').forEach(e=>e.style.display='none');c.classList.remove('pc-wide');const i=/iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());const a=/android/.test(navigator.userAgent.toLowerCase());if(i&&!isPC){document.getElementById('ios-guide').style.display='block';document.getElementById('video-vertical').style.display='block'}else if(a&&!isPC){document.getElementById('android-guide').style.display='block';document.getElementById('video-vertical').style.display='block'}else{document.getElementById('pc-guide').style.display='block';document.getElementById('video-horizontal').style.display='block';c.classList.add('pc-wide')}p.style.display='flex'}
+        function loadDefaults() { RAM.goals = [ { id: Date.now(), title: "🏃‍♂️ Спортивное тело", type: 'normal', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60', tasks: [{ id: 1, txt: "Купить абонемент в зал", done: true }, { id: 2, txt: "Тренировка 3 раза в неделю", done: false }] }, { id: Date.now()+1, title: "💰 Накопить на MacBook", type: 'financial', mode: 'manual', target: 2000, current: 500, currency: 'USD', img: null, tasks: [] } ]; recalcStats(); render(); }
+        checkPlatform(); window.addEventListener('resize', checkPlatform);
+    </script>
+</body>
+</html>
