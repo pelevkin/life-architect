@@ -597,8 +597,22 @@
         try {
             initLanguage();
             app = firebase.initializeApp(firebaseConfig); auth = firebase.auth(); db = firebase.firestore();
-            auth.onAuthStateChanged(u => { if(u){currentUser=u; loadFromCloud();}else{currentUser=null; loadLocal();} updateAuthUI(); });
-        } catch(e) { initLanguage(); loadLocal(); updateAuthUI(); }
+            auth.onAuthStateChanged(async (user) => {
+
+    if (!user) {
+        // Не авторизован → отправляем на страницу входа
+        window.location.href = "auth.html";
+        return;
+    }
+
+    currentUser = user;
+
+    await ensureUserDoc(user, user.isAnonymous);
+
+    await loadFromCloud();
+    updateAuthUI();
+
+});
 
         // ... [Rest of logic is same, but using t() helper] ...
 
